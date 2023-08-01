@@ -4,7 +4,7 @@
 Summary:        Utilities from the general purpose cryptography library with TLS implementation
 Name:           openssl
 Version:        1.1.1k
-Release:        24%{?dist}
+Release:        99%{?dist}
 License:        OpenSSL
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
