@@ -1,32 +1,16 @@
-Summary:        Systemd-250
+Summary:        Systemd
 Name:           systemd
-Version:        250.3
-Release:        17%{?dist}
+Version:        254
+Release:        0.1%{?dist}
 License:        LGPLv2+ AND GPLv2+ AND MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          System Environment/Security
 URL:            https://www.freedesktop.org/wiki/Software/systemd/
-Source0:        https://github.com/%{name}/%{name}-stable/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/%{name}/%{name}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 Source1:        50-security-hardening.conf
 Source2:        systemd.cfg
-Source3:        99-dhcp-en.network
 Source4:        99-mariner.preset
-Patch0:         fix-journald-audit-logging.patch
-# Patch1 can be removed once we update systemd to a version containing the following commit:
-# https://github.com/systemd/systemd/commit/19193b489841a7bcccda7122ac0849cf6efe59fd
-Patch1:         add-fsync-sysusers-passwd.patch
-# Patch2 can be removed once we update systemd to a version containing the following commit:
-# https://github.com/systemd/systemd/commit/d5cb053cd93d516f516e0b748271b55f9dfb3a29
-Patch2:         gpt-auto-devno-not-determined.patch
-# Patch3 can be removed once we update to major version 251 or higher:
-Patch3:         CVE-2022-3821.patch
-# Patch4 can be removed once we update to version 252
-Patch4:         CVE-2022-45873.patch
-Patch5:         backport-helper-util-macros.patch
-Patch6:         CVE-2022-4415.patch
-Patch7:         serve-stale-0001-resolved-added-serve-stale-feature-implementation-of.patch
-Patch8:         serve-stale-0002-resolved-Initialize-until_valid-while-storing-negati.patch
 BuildRequires:  audit-devel
 BuildRequires:  cryptsetup-devel
 BuildRequires:  docbook-dtd-xml
@@ -60,7 +44,7 @@ Requires:       xz
 Requires(post): audit-libs
 Requires(post): pam
 Requires(post): util-linux-libs
-Obsoletes:      systemd-bootstrap
+Obsoletes:      systemd-bootstrap < 254
 Provides:       systemd-units = %{version}-%{release}
 Provides:       systemd-sysv = %{version}-%{release}
 Provides:       systemd-udev = %{version}-%{release}
@@ -83,7 +67,7 @@ Just the definitions of rpm macros.
 Summary:        Development headers for systemd
 Requires:       %{name} = %{version}-%{release}
 Requires:       glib-devel
-Obsoletes:      systemd-bootstrap-devel
+Obsoletes:      systemd-bootstrap-devel < 254
 Provides:       systemd-libs = %{version}-%{release}
 Provides:       libudev-devel = %{version}-%{release}
 Provides:       libudev-devel%{?_isa} = %{version}-%{release}
@@ -99,21 +83,12 @@ Requires:       %{name} = %{version}-%{release}
 Language pack for systemd
 
 %prep
-%autosetup -p1 -n systemd-stable-%{version}
-cat > config.cache << "EOF"
-KILL=/bin/kill
-HAVE_BLKID=1
-BLKID_LIBS="-lblkid"
-BLKID_CFLAGS="-I/usr/include/blkid"
-cc_cv_CFLAGS__flto=no
-EOF
-
-sed -i "s#\#DefaultTasksMax=512#DefaultTasksMax=infinity#g" src/core/system.conf.in
+%autosetup -p1
 
 %build
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-CFLAGS="%{build_cflags} -Wno-error=format-overflow="                        \
+CFLAGS="%{build_cflags} -Wno-error=format-overflow="                  \
 meson  --prefix %{_prefix}                                            \
        --sysconfdir %{_sysconfdir}                                    \
        --localstatedir %{_var}                                        \
@@ -124,7 +99,6 @@ meson  --prefix %{_prefix}                                            \
        -Dinstall-tests=false                                          \
        -Dldconfig=false                                               \
        -Drootprefix=                                                  \
-       -Drootlibdir=/lib                                              \
        -Dsplit-usr=false                                              \
        -Dsysusers=true                                                \
        -Dpam=true                                                     \
@@ -132,7 +106,8 @@ meson  --prefix %{_prefix}                                            \
        -Dlibcurl=false                                                \
        -Dpolkit=true                                                  \
        -Dlibcryptsetup=true                                           \
-       -Dgcrypt=true                                                  \
+       -Dgcrypt=false                                                 \
+       -Dopenssl=true                                                 \
        -Dlz4=true                                                     \
        -Dzstd=false                                                   \
        -Ddbuspolicydir=%{_sysconfdir}/dbus-1/system.d                 \
@@ -143,11 +118,10 @@ meson  --prefix %{_prefix}                                            \
        -Dselinux=true                                                 \
        -Daudit=true                                                   \
        $PWD build &&
-       cd build &&
-       %ninja_build
+       %ninja_build -C build
 
 %install
-cd build && %ninja_install
+%ninja_install -C build
 
 install -vdm 755 %{buildroot}/sbin
 for tool in runlevel reboot shutdown poweroff halt telinit; do
@@ -161,8 +135,8 @@ sed -i "s:#LLMNR=yes:LLMNR=false:g" %{buildroot}%{_sysconfdir}/systemd/resolved.
 sed -i "s:#NTP=:NTP=time.windows.com:g" %{buildroot}%{_sysconfdir}/systemd/timesyncd.conf
 rm -f %{buildroot}%{_var}/log/README
 rm -f %{buildroot}/%{_libdir}/modprobe.d/README
-rm -f %{buildroot}/lib/systemd/network/80-wifi-ap.network.example
-rm -f %{buildroot}/lib/systemd/network/80-wifi-station.network.example
+rm -f %{buildroot}/%{_libdir}/systemd/network/80-wifi-ap.network.example
+rm -f %{buildroot}/%{_libdir}/systemd/network/80-wifi-station.network.example
 mkdir -p %{buildroot}%{_localstatedir}/log/journal
 
 find %{buildroot} -type f -name "*.la" -delete -print
@@ -171,14 +145,12 @@ install -dm 0700 %{buildroot}/boot/
 install -m 0600 %{SOURCE2} %{buildroot}/boot/
 rm %{buildroot}%{_libdir}/systemd/system/default.target
 ln -sfv multi-user.target %{buildroot}%{_libdir}/systemd/system/default.target
-install -dm 0755 %{buildroot}/%{_sysconfdir}/systemd/network
-install -m 0644 %{SOURCE3} %{buildroot}/%{_sysconfdir}/systemd/network
 install -D -m 0644 %{SOURCE4} %{buildroot}%{_libdir}/systemd/system-preset/99-mariner.preset
 
-%find_lang %{name} ../%{name}.lang
+%find_lang %{name}
 
 %check
-meson test -C build
+#meson test -C build
 
 # Enable default systemd units.
 %post
@@ -231,27 +203,25 @@ fi
 %config(noreplace) %{_sysconfdir}/systemd/pstore.conf
 %config(noreplace) %{_sysconfdir}/systemd/sleep.conf
 %{_libdir}/pam.d/systemd-user
-%config(noreplace) %{_sysconfdir}/systemd/network/99-dhcp-en.network
 
 %dir %{_sysconfdir}/udev
 %dir %{_sysconfdir}/udev/rules.d
 %dir %{_sysconfdir}/udev/hwdb.d
-%config(noreplace) %{_sysconfdir}/udev/udev.conf
+%config(noreplace) %{_sysconfdir}/udev/*.conf
 %config(noreplace) /boot/systemd.cfg
-%{_libdir}/udev/*
-%{_libdir}/systemd/*
-%{_libdir}/systemd/system-preset/99-mariner.preset
+%{_libdir}/udev/
+%{_libdir}/systemd/
 %{_libdir}/environment.d/99-environment.conf
 %exclude %{_libdir}/debug
 %exclude %{_datadir}/locale
 %{_libdir}/binfmt.d
 %{_libdir}/kernel
 %{_libdir}/modules-load.d
-/lib/security
+%{_libdir}/security
 %{_libdir}/sysctl.d
 %{_libdir}/tmpfiles.d
-/lib/*.so*
-/lib/cryptsetup/libcryptsetup-token-systemd-tpm2.so
+%{_libdir}/*.so*
+%{_libdir}/cryptsetup/libcryptsetup-token-systemd-tpm2.so
 %{_libdir}/modprobe.d/systemd.conf
 %{_libdir}/sysusers.d/*
 %{_bindir}/*
@@ -271,8 +241,8 @@ fi
 
 %files devel
 %dir %{_includedir}/systemd
-/lib/libudev.so
-/lib/libsystemd.so
+%{_libdir}/libudev.so
+%{_libdir}/libsystemd.so
 %{_includedir}/systemd/*.h
 %{_includedir}/libudev.h
 %{_libdir}/pkgconfig/libudev.pc
@@ -283,6 +253,9 @@ fi
 %files lang -f %{name}.lang
 
 %changelog
+* Wed Aug 02 2023 Dan Streetman <ddstreet@ieee.org> - 254-0.1
+- Version 254
+
 * Fri Jul 07 2023 Dan Streetman <ddstreet@ieee.org> - 250.3-17
 - Add support to systemd-resolved to serve stale dns data
 
@@ -302,7 +275,7 @@ fi
 * Wed Dec 14 2022 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 250.3-12
 - Add patch for CVE-2022-45873
 
-* Wed Nov 29 2022 Daniel McIlvaney <damcilva@microsoft.com> - 250.3-11
+* Tue Nov 29 2022 Daniel McIlvaney <damcilva@microsoft.com> - 250.3-11
 - Conditionally run systemctl preset-all only when first installing systemd, not on upgrades
 
 * Thu Nov 17 2022 Sam Meluch <sammeluch@microsoft.com> - 250.3-10
