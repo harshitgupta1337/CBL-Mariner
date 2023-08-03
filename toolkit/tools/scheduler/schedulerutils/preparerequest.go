@@ -82,7 +82,7 @@ func canUseCacheForNode(pkgGraph *pkggraph.PkgGraph, node *pkggraph.PkgNode, pac
 
 	// If delta build enabled, then we can use the cache, unless a dependency of this package is rebuilding
 	if deltaBuild {
-		logger.Log.Warnf("Delta build: Using cached version of %v regardles of rebuilding dependencies", node.FriendlyName())
+		logger.Log.Debugf("Delta build: Using cached version of %v regardles of rebuilding dependencies", node.FriendlyName())
 		canUseCache = true
 		return
 	}
