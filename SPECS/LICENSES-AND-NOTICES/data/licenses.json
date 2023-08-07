@@ -2231,6 +2231,7 @@
                 "nmi",
                 "node-problem-detector",
                 "ntopng",
+                "opentelemetry-cpp",
                 "packer",
                 "pcaudiolib",
                 "pcre2",
