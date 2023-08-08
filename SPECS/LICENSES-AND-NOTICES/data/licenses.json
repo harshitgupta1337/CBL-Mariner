@@ -2534,6 +2534,7 @@
                 "plexus-interpolation",
                 "plexus-pom",
                 "plexus-utils",
+                "proj",
                 "psl-make-dafsa",
                 "publicsuffix",
                 "qdox",
